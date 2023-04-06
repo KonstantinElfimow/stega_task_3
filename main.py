@@ -3,7 +3,6 @@ from PIL import Image
 import numpy as np
 from dotenv import load_dotenv
 import os
-import pandas as pd
 import matplotlib.pyplot as plt
 
 import warnings
@@ -267,9 +266,7 @@ def metrics(empty_image: str, full_image: str) -> None:
 
 def e_probability(message: str, recovered_message: str) -> float:
     message_bits = np.asarray(BruyndonckxMethod.str_to_bits(message))
-    print(message_bits)
     recovered_message_bits = np.asarray(BruyndonckxMethod.str_to_bits(recovered_message))
-    print(recovered_message_bits)
     return round(100 * np.mean(np.abs(message_bits - recovered_message_bits[:message_bits.shape[0]])), 2)
 
 
