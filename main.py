@@ -131,42 +131,55 @@ class BruyndonckxMethod:
 
     count = 0
 
-    def __embed_bit_with_modification_pixels_brightness(self, sorted_pixels: list[Pixel], g: dict[str: list], bit: int):
-        arr = np.asarray([pixel.rgba for pixel in sorted_pixels], dtype=np.uint8)
+    def __embed_bit_with_modification_pixels_brightness(self, sorted_block_pixels: list[Pixel], g: dict[str: list], bit: int):
+        arr = np.asarray([pixel.rgba for pixel in sorted_block_pixels], dtype=np.uint8)
         delta_l = self.__delta_l
-        sign = 1 if bit == 1 else -1
-        print('__________________________________')
-        print(BruyndonckxMethod.count)
-        BruyndonckxMethod.count += 1
+        sign = 1 if bit else -1
+
         g1_arr = arr[(g['1A'] + g['1B'])].copy()
-        arr[g['1A'], 3] -= (np.mean(arr[g['1A'], 3]) + (
+        arr[g['1A'], 3] -= (np.mean(arr[g['1A'], 3]) - (
                 np.mean(g1_arr[:, 3]) + (sign * arr[g['1B']].shape[0] * delta_l / g1_arr.shape[0]))).astype(
             np.uint8)
-        print('Среднее l1a: {}'.format(np.mean(arr[g['1A'], 3])))
+
         arr[g['1B'], 3] -= (np.mean(arr[g['1B'], 3]) - (
                 np.mean(g1_arr[:, 3]) - (sign * arr[g['1A']].shape[0] * delta_l / g1_arr.shape[0]))).astype(
             np.uint8)
-        print('Среднее l1b: {}'.format(np.mean(arr[g['1B'], 3])))
+
         g2_arr = arr[(g['2A'] + g['2B'])].copy()
-        arr[g['2A'], 3] -= (np.mean(arr[g['2A'], 3]) + (
+        arr[g['2A'], 3] -= (np.mean(arr[g['2A'], 3]) - (
                 np.mean(g2_arr[:, 3]) + (sign * arr[g['2B']].shape[0] * delta_l / g2_arr.shape[0]))).astype(
             np.uint8)
-        print('Среднее l2a: {}'.format(np.mean(arr[g['2A'], 3])))
+
         arr[g['2B'], 3] -= (np.mean(arr[g['2B'], 3]) - (
                 np.mean(g2_arr[:, 3]) - (sign * arr[g['2A']].shape[0] * delta_l / g2_arr.shape[0]))).astype(
             np.uint8)
-        print('Среднее l2b: {}'.format(np.mean(arr[g['2B'], 3])))
-        print('__________________________________')
+
+        # print('__________________________________')
+        # print(BruyndonckxMethod.count)
+        # BruyndonckxMethod.count += 1
+        # print('bit: {}'.format(bit))
+        # mean_1A = np.mean(arr[g['1A'], 3])
+        # print('Среднее l1a: {}'.format(mean_1A))
+        # mean_1B = np.mean(arr[g['1B'], 3])
+        # print('Среднее l1b: {}'.format(mean_1B))
+        # mean_2A = np.mean(arr[g['2A'], 3])
+        # print('Среднее l2a: {}'.format(mean_2A))
+        # mean_2B = np.mean(arr[g['2B'], 3])
+        # print('Среднее l2b: {}'.format(mean_2B))
+        # print('Сравнение:\n1A - 1B: {}\n2A - 2B: {}'.format(mean_1A - mean_1B, mean_2A - mean_2B))
+        # assert (mean_1A - mean_1B > 0 and mean_2A - mean_2B > 0) or (mean_1A - mean_1B < 0 and mean_2A - mean_2B < 0)
+        # print('__________________________________')
+
         for i, pixel in enumerate(arr):
-            sorted_pixels[i].rgba[:] = pixel[:]
+            sorted_block_pixels[i].rgba[:] = pixel[:]
 
     def __recover_bit_from_modified_block(self, sorted_pixels: list[Pixel], g: dict[str: list]) -> int | None:
         arr = np.asarray([pixel.rgba for pixel in sorted_pixels], dtype=np.uint8)
-        if np.mean(arr[g['1A'], 3]) - np.mean(arr[g['1B'], 3]) < 0 and np.mean(arr[g['2A'], 3]) - np.mean(
-                arr[g['2B'], 3]) < 0:
+        if (np.mean(arr[g['1A'], 3]) - np.mean(arr[g['1B'], 3]) < 0) and (np.mean(arr[g['2A'], 3]) - np.mean(
+                arr[g['2B'], 3]) < 0):
             return 0
-        elif np.mean(arr[g['1A'], 3]) - np.mean(arr[g['1B'], 3]) > 0 and np.mean(arr[g['2A'], 3]) - np.mean(
-                arr[g['2B'], 3]) > 0:
+        elif (np.mean(arr[g['1A'], 3]) - np.mean(arr[g['1B'], 3]) > 0) and (np.mean(arr[g['2A'], 3]) - np.mean(
+                arr[g['2B'], 3]) > 0):
             return 1
         return None
 
@@ -181,16 +194,13 @@ class BruyndonckxMethod:
         height, width = image.shape[0], image.shape[1]
 
         message_bits = BruyndonckxMethod.str_to_bits(message)
-        print(message_bits)
         message_bits_length = len(message_bits)
         if message_bits_length > (height // 8) * (width // 8):
             raise ValueError('Размер сообщения превышает размер контейнера!')
         message_bits = deque(message_bits)
 
         for start, end in self.__define_bounds_of_blocks(height, width)[:message_bits_length]:
-            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
             old_block = image[start.i: end.i, start.j: end.j, :].copy()
-            print(old_block)
             old_block = old_block.reshape(-1, 4)
             assert len(old_block) == 64
             new_block = sorted([Pixel(pixel) for pixel in old_block], key=lambda obj: obj.rgba[3])
@@ -200,9 +210,7 @@ class BruyndonckxMethod:
             self.__embed_bit_with_modification_pixels_brightness(new_block, group_index, bit)
             new_block = sorted(new_block, key=lambda obj: obj.order)
             new_block = (np.asarray([pixel.rgba for pixel in new_block], dtype=np.uint8)).reshape(self.__n, self.__n, 4)
-            print(new_block)
             image[start.i: end.i, start.j: end.j, :] = new_block[:, :, :]
-            print(image[start.i: end.i, start.j: end.j, :])
 
         Image.fromarray(image, 'RGBA').save(self.__full_image_path, 'PNG')
         np.random.seed()
@@ -222,20 +230,17 @@ class BruyndonckxMethod:
             modified_block = modified_block.reshape(-1, 4)
             assert len(modified_block) == 64
 
-            modified_block = sorted([Pixel(pixel) for pixel in modified_block], key=lambda obj: obj.rgba[3])
+            modified_block = sorted([Pixel(pixel) for pixel in modified_block], key=lambda pixel: int(0.299 * pixel.rgba[0] + 0.587 * pixel.rgba[1] + 0.114 * pixel.rgba[2]))
 
             div_index = self.__find_div_index(tuple(modified_block))
             group_index = self.__make_pixel_groups_by_masks(div_index)
 
             bit = self.__recover_bit_from_modified_block(modified_block, group_index)
-
-            if bit:
+            if bit is not None:
                 message_bits.append(bit)
             else:
                 np.random.seed()
-                print(message_bits)
                 message = BruyndonckxMethod.bits_to_str(message_bits)
-                print(message)
                 return message
 
 
@@ -283,8 +288,8 @@ def main():
     recovered_message = bruyndonckx.recover(key)
     print('Ваше сообщение:\n{}'.format(recovered_message))
 
-    # print(e_probability(message, recovered_message))
-    # metrics(old_image, new_image)
+    print('Вероятность ошибки: {}'.format(e_probability(message, recovered_message)))
+    metrics(old_image, new_image)
 
 
 if __name__ == '__main__':
