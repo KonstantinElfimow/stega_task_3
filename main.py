@@ -3,25 +3,9 @@ from PIL import Image
 import numpy as np
 from dotenv import load_dotenv
 import os
-import matplotlib.pyplot as plt
 
 import warnings
-
 warnings.filterwarnings(action='once')
-
-large = 22
-med = 16
-small = 12
-params = {'axes.titlesize': large,
-          'legend.fontsize': med,
-          'figure.figsize': (16, 10),
-          'axes.labelsize': med,
-          'axes.titlesize': med,
-          'xtick.labelsize': med,
-          'ytick.labelsize': med,
-          'figure.titlesize': large}
-plt.rcParams.update(params)
-plt.style.use('seaborn-whitegrid')
 
 encoding: str = 'utf-8'
 
@@ -128,8 +112,6 @@ class BruyndonckxMethod:
             d.setdefault(group, []).append(i)
         return d
 
-    count = 0
-
     def __embed_bit_with_modification_pixels_brightness(self, sorted_block_pixels: list[Pixel], g: dict[str: list], bit: int):
         arr = np.asarray([pixel.rgba for pixel in sorted_block_pixels], dtype=np.uint8)
         delta_l = self.__delta_l
@@ -154,8 +136,6 @@ class BruyndonckxMethod:
             np.uint8)
 
         # print('__________________________________')
-        # print(BruyndonckxMethod.count)
-        # BruyndonckxMethod.count += 1
         # print('bit: {}'.format(bit))
         # mean_1A = np.mean(arr[g['1A'], 3])
         # print('Среднее l1a: {}'.format(mean_1A))
