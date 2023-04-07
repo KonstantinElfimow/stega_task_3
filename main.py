@@ -117,7 +117,7 @@ class BruyndonckxMethod:
         delta_l = self.__delta_l
         sign = 1 if bit else -1
 
-        g1_arr = arr[(g['1A'] + g['1B'])].copy()
+        g1_arr = arr[(g['1A'] + g['1B'])]
         arr[g['1A'], 3] -= (np.mean(arr[g['1A'], 3]) - (
                 np.mean(g1_arr[:, 3]) + (sign * arr[g['1B']].shape[0] * delta_l / g1_arr.shape[0]))).astype(
             np.uint8)
@@ -126,7 +126,7 @@ class BruyndonckxMethod:
                 np.mean(g1_arr[:, 3]) - (sign * arr[g['1A']].shape[0] * delta_l / g1_arr.shape[0]))).astype(
             np.uint8)
 
-        g2_arr = arr[(g['2A'] + g['2B'])].copy()
+        g2_arr = arr[(g['2A'] + g['2B'])]
         arr[g['2A'], 3] -= (np.mean(arr[g['2A'], 3]) - (
                 np.mean(g2_arr[:, 3]) + (sign * arr[g['2B']].shape[0] * delta_l / g2_arr.shape[0]))).astype(
             np.uint8)
@@ -150,7 +150,7 @@ class BruyndonckxMethod:
         # print('__________________________________')
 
         for i, pixel in enumerate(arr):
-            sorted_block_pixels[i].rgba[:] = pixel[:]
+            sorted_block_pixels[i].rgba = pixel
 
     def __recover_bit_from_modified_block(self, sorted_pixels: list[Pixel], g: dict[str: list]) -> int | None:
         arr = np.asarray([pixel.rgba for pixel in sorted_pixels], dtype=np.uint8)
@@ -179,9 +179,10 @@ class BruyndonckxMethod:
         message_bits = deque(message_bits)
 
         for start, end in self.__define_bounds_of_blocks(height, width)[:message_bits_length]:
-            old_block = image[start.i: end.i, start.j: end.j, :].copy()
+            old_block = image[start.i: end.i, start.j: end.j].copy()
             old_block = old_block.reshape(-1, 4)
             assert len(old_block) == 64
+
             new_block = sorted([Pixel(pixel) for pixel in old_block], key=lambda obj: obj.rgba[3])
             div_index = self.__find_div_index(tuple(new_block))
             group_index = self.__make_pixel_groups_by_masks(div_index)
@@ -189,7 +190,7 @@ class BruyndonckxMethod:
             self.__embed_bit_with_modification_pixels_brightness(new_block, group_index, bit)
             new_block = sorted(new_block, key=lambda obj: obj.order)
             new_block = (np.asarray([pixel.rgba for pixel in new_block], dtype=np.uint8)).reshape(self.__n, self.__n, 4)
-            image[start.i: end.i, start.j: end.j, :] = new_block[:, :, :]
+            image[start.i: end.i, start.j: end.j] = new_block[:, :]
 
         Image.fromarray(image, 'RGBA').save(self.__full_image_path, 'PNG')
         np.random.seed()
@@ -205,11 +206,12 @@ class BruyndonckxMethod:
 
         message_bits = []
         for start, end in self.__define_bounds_of_blocks(height, width):
-            modified_block = image[start.i: end.i, start.j: end.j, :].copy()
+            modified_block = image[start.i: end.i, start.j: end.j].copy()
             modified_block = modified_block.reshape(-1, 4)
             assert len(modified_block) == 64
 
-            modified_block = sorted([Pixel(pixel) for pixel in modified_block], key=lambda pixel: int(0.299 * pixel.rgba[0] + 0.587 * pixel.rgba[1] + 0.114 * pixel.rgba[2]))
+            modified_block = sorted([Pixel(pixel) for pixel in modified_block], key=lambda pixel:
+                                    int(0.299 * pixel.rgba[0] + 0.587 * pixel.rgba[1] + 0.114 * pixel.rgba[2]))
 
             div_index = self.__find_div_index(tuple(modified_block))
             group_index = self.__make_pixel_groups_by_masks(div_index)
