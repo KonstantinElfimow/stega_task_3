@@ -274,11 +274,11 @@ def accuracy(message: str, recovered_message: str) -> float:
 
 
 def paint_diagram_alpha(picture: np.array, modified_picture: np.array) -> None:
-    picture_alpha = (np.concatenate([picture[:64, :64].copy(), picture[:64, 64:128].copy()],
+    picture_alpha = (np.concatenate([picture[:8, :8].copy(), picture[:8, 8:16].copy()],
                                     axis=0).reshape(-1, 4))[:, 3]
-    modified_picture_alpha = (np.concatenate([modified_picture[:64, :64].copy(), modified_picture[:64, 64:128].copy()],
+    modified_picture_alpha = (np.concatenate([modified_picture[:8, :8].copy(), modified_picture[:8, 8:16].copy()],
                                              axis=0).reshape(-1, 4))[:, 3]
-    x = np.arange(128)
+    x = np.arange(len(picture_alpha))
 
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=x, y=picture_alpha, mode='lines+markers', name='Начальная яркость заполненного '
@@ -303,26 +303,30 @@ def embed_message_distort_container_and_recover_message(empty_image_path: str, f
     modified_picture = picture.copy()
     height, width = modified_picture.shape[0], modified_picture.shape[1]
     # усреднение по соседним пикселям в блоке
-    window_size = 8
+    window_size = 4
     assert window_size > 0
+
     your_choice = abs(window_size // 2)
-    shift_l = min(your_choice, window_size)
+    assert 0 < your_choice < window_size
+    shift_l = your_choice
     shift_r = window_size - shift_l
+
     for start, end in define_bounds_of_blocks(height, width, bruyndonckx.size_of_block):
         block = modified_picture[start.i: end.i, start.j: end.j].copy()
         old_size = block.shape
         block = block.reshape(-1, 4)
         assert len(block) == 64
 
+        new_block = block.copy()
         for k in np.arange(block.shape[0]):
             if k < shift_l:
-                block[k, 3] = np.mean(block[0: k + shift_r, 3])
+                new_block[k, 3] = np.mean(block[0: k + shift_r, 3])
             elif shift_l <= k <= block.shape[0] - shift_r:
-                block[k, 3] = np.mean(block[k - shift_l: k + shift_r, 3])
+                new_block[k, 3] = np.mean(block[k - shift_l: k + shift_r, 3])
             else:
-                block[k, 3] = np.mean(block[k - shift_l: block.shape[0], 3])
-
-        modified_picture[start.i: end.i, start.j: end.j] = block.reshape(old_size)
+                new_block[k, 3] = np.mean(block[k - shift_l: block.shape[0], 3])
+        del block
+        modified_picture[start.i: end.i, start.j: end.j] = new_block.reshape(old_size)
 
     paint_diagram_alpha(picture, modified_picture)
     Image.fromarray(modified_picture, 'RGBA').save(filled_image_path, 'PNG')
