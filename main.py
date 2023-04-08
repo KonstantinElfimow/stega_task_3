@@ -53,7 +53,7 @@ class Pixel:
         return self.__rgba
 
     @rgba.setter
-    def rgba(self, value):
+    def rgba(self, value) -> None:
         assert value.shape[0] == 4 and value.dtype == np.uint8
         self.__rgba = value
 
@@ -112,7 +112,8 @@ class BruyndonckxMethod:
             d.setdefault(group, []).append(i)
         return d
 
-    def __embed_bit_with_modification_pixels_brightness(self, sorted_block_pixels: list[Pixel], g: dict[str: list], bit: int):
+    def __embed_bit_with_modification_pixels_brightness(self, sorted_block_pixels: list[Pixel],
+                                                        g: dict[str: list], bit: int) -> None:
         arr = np.asarray([pixel.rgba for pixel in sorted_block_pixels], dtype=np.uint8)
         delta_l = self.__delta_l
         sign = 1 if bit else -1
@@ -162,7 +163,7 @@ class BruyndonckxMethod:
             return 1
         return None
 
-    def embed(self, message: str, key_generator: int):
+    def embed(self, message: str, key_generator: int) -> None:
         np.random.seed(key_generator)
 
         img = Image.open(self.__empty_image_path).convert('RGBA')
