@@ -303,9 +303,11 @@ def embed_message_distort_container_and_recover_message(empty_image_path: str, f
     modified_picture = picture.copy()
     height, width = modified_picture.shape[0], modified_picture.shape[1]
     # усреднение по соседним пикселям в блоке
-    window_size = 32
-    shift_l = abs(window_size // 2)
-    shift_r = abs(window_size // 2)
+    window_size = 8
+    assert window_size > 0
+    your_choice = abs(window_size // 2)
+    shift_l = min(your_choice, window_size)
+    shift_r = window_size - shift_l
     for start, end in define_bounds_of_blocks(height, width, bruyndonckx.size_of_block):
         block = modified_picture[start.i: end.i, start.j: end.j].copy()
         old_size = block.shape
@@ -338,12 +340,12 @@ def main():
     with open('message.txt', mode='r', encoding=encoding) as file:
         message = file.read()
 
-    bruyndonckx = BruyndonckxMethod()
-    bruyndonckx.embed(empty_image_path, filled_image_path, message, key)
-    recovered_message = bruyndonckx.recover(filled_image_path, key)
-    print('Ваше сообщение:\n{}'.format(recovered_message))
-    print('Точность восстановления: {}'.format(accuracy(message, recovered_message)))
-    metrics(empty_image_path, filled_image_path)
+    # bruyndonckx = BruyndonckxMethod()
+    # bruyndonckx.embed(empty_image_path, filled_image_path, message, key)
+    # recovered_message = bruyndonckx.recover(filled_image_path, key)
+    # print('Ваше сообщение:\n{}'.format(recovered_message))
+    # print('Точность восстановления: {}'.format(accuracy(message, recovered_message)))
+    # metrics(empty_image_path, filled_image_path)
 
     wrong_recovered_message = embed_message_distort_container_and_recover_message(empty_image_path, 'test.png',
                                                                                   key, message)
