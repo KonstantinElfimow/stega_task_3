@@ -340,17 +340,17 @@ def main():
     with open('message.txt', mode='r', encoding=encoding) as file:
         message = file.read()
 
-    # bruyndonckx = BruyndonckxMethod()
-    # bruyndonckx.embed(empty_image_path, filled_image_path, message, key)
-    # recovered_message = bruyndonckx.recover(filled_image_path, key)
-    # print('Ваше сообщение:\n{}'.format(recovered_message))
-    # print('Точность восстановления: {}'.format(accuracy(message, recovered_message)))
-    # metrics(empty_image_path, filled_image_path)
+    bruyndonckx = BruyndonckxMethod()
+    bruyndonckx.embed(empty_image_path, filled_image_path, message, key)
+    recovered_message = bruyndonckx.recover(filled_image_path, key)
+    print('Ваше сообщение:\n{}'.format(recovered_message))
+    print('Точность восстановления: {}%'.format(accuracy(message, recovered_message)))
+    metrics(empty_image_path, filled_image_path)
 
     wrong_recovered_message = embed_message_distort_container_and_recover_message(empty_image_path, 'test.png',
                                                                                   key, message)
     print('Искажённое сообщение:\n{}'.format(wrong_recovered_message))
-    print('Точность восстановления: {}'.format(accuracy(message, wrong_recovered_message)))
+    print('Точность восстановления: {}%'.format(accuracy(message, wrong_recovered_message)))
 
 
 if __name__ == '__main__':
