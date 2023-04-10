@@ -3,9 +3,25 @@ from PIL import Image
 import numpy as np
 from dotenv import load_dotenv
 import os
-import plotly.graph_objs as go
-
+import matplotlib.pyplot as plt
 import warnings
+
+
+large = 22
+med = 16
+small = 12
+params = {'axes.titlesize': large,
+          'legend.fontsize': med,
+          'figure.figsize': (16, 10),
+          'axes.labelsize': med,
+          'axes.titlesize': med,
+          'xtick.labelsize': med,
+          'ytick.labelsize': med,
+          'figure.titlesize': large}
+plt.rcParams.update(params)
+plt.style.use('seaborn-whitegrid')
+
+
 warnings.filterwarnings(action='once')
 
 encoding: str = 'utf-8'
@@ -92,8 +108,8 @@ class Pixel:
 class BruyndonckxMethod:
     def __init__(self):
         self.__size_of_block: int = 8
-        self.__diff_limit: int = 2
-        self.__delta_l = 8
+        self.__diff_limit: int = 3
+        self.__delta_l = 5
 
     @property
     def size_of_block(self) -> int:
@@ -110,7 +126,7 @@ class BruyndonckxMethod:
     def __find_div_index(self, sorted_pixels: tuple[Pixel]) -> int:
         pixels_arr = np.asarray([pixel.rgba for pixel in sorted_pixels], dtype=np.uint8)
         diffs_by_alpha = np.diff(pixels_arr[:, 3])
-        shift = 16
+        shift = 24
         div_index = np.argmax(diffs_by_alpha[shift:-shift]) + shift
         if diffs_by_alpha[div_index] > self.diff_limit:
             div_index = len(sorted_pixels) // 2
@@ -131,21 +147,17 @@ class BruyndonckxMethod:
 
         g1_arr = arr[(g['1A'] + g['1B'])]
         arr[g['1A'], 3] -= (np.mean(arr[g['1A'], 3]) - (
-                np.mean(g1_arr[:, 3]) + (sign * arr[g['1B']].shape[0] * delta_l / g1_arr.shape[0]))).astype(
-            np.uint8)
+                np.mean(g1_arr[:, 3]) + (sign * arr[g['1B']].shape[0] * delta_l / g1_arr.shape[0]))).astype(np.uint8)
 
         arr[g['1B'], 3] -= (np.mean(arr[g['1B'], 3]) - (
-                np.mean(g1_arr[:, 3]) - (sign * arr[g['1A']].shape[0] * delta_l / g1_arr.shape[0]))).astype(
-            np.uint8)
+                np.mean(g1_arr[:, 3]) - (sign * arr[g['1A']].shape[0] * delta_l / g1_arr.shape[0]))).astype(np.uint8)
 
         g2_arr = arr[(g['2A'] + g['2B'])]
         arr[g['2A'], 3] -= (np.mean(arr[g['2A'], 3]) - (
-                np.mean(g2_arr[:, 3]) + (sign * arr[g['2B']].shape[0] * delta_l / g2_arr.shape[0]))).astype(
-            np.uint8)
+                np.mean(g2_arr[:, 3]) + (sign * arr[g['2B']].shape[0] * delta_l / g2_arr.shape[0]))).astype(np.uint8)
 
         arr[g['2B'], 3] -= (np.mean(arr[g['2B'], 3]) - (
-                np.mean(g2_arr[:, 3]) - (sign * arr[g['2A']].shape[0] * delta_l / g2_arr.shape[0]))).astype(
-            np.uint8)
+                np.mean(g2_arr[:, 3]) - (sign * arr[g['2A']].shape[0] * delta_l / g2_arr.shape[0]))).astype(np.uint8)
 
         for i, pixel in enumerate(arr):
             sorted_block_pixels[i].rgba = pixel
@@ -222,7 +234,7 @@ class BruyndonckxMethod:
             modified_block = modified_block.reshape(-1, 4)
             assert len(modified_block) == 64
 
-            modified_block = sorted([Pixel(pixel) for pixel in modified_block], key=lambda pixel: int(
+            modified_block = sorted([Pixel(pixel) for pixel in modified_block], key=lambda pixel: np.uint8(
                 0.299 * pixel.rgba[0] + 0.587 * pixel.rgba[1] + 0.114 * pixel.rgba[2]))
 
             div_index = self.__find_div_index(tuple(modified_block))
@@ -274,22 +286,15 @@ def accuracy(message: str, recovered_message: str) -> float:
 
 
 def paint_diagram_alpha(picture: np.array, modified_picture: np.array) -> None:
-    picture_alpha = (np.concatenate([picture[:8, :8].copy(), picture[:8, 8:16].copy()],
-                                    axis=0).reshape(-1, 4))[:, 3]
-    modified_picture_alpha = (np.concatenate([modified_picture[:8, :8].copy(), modified_picture[:8, 8:16].copy()],
-                                             axis=0).reshape(-1, 4))[:, 3]
+    picture_alpha = (picture[:64, :64].copy().reshape(-1, 4))[:, 3]
+    modified_picture_alpha = (modified_picture[:64, :64].copy().reshape(-1, 4))[:, 3]
     x = np.arange(len(picture_alpha))
 
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=x, y=picture_alpha, mode='lines+markers', name='Начальная яркость заполненного '
-                                                                              'стегаконтейнера'))
-    fig.add_trace(go.Scatter(x=x, y=modified_picture_alpha, mode='lines+markers', name='Яркость после усреднения в '
-                                                                                       'скользящем окне'))
-    fig.update_layout(legend_orientation="h",
-                      legend=dict(x=.5, xanchor="center"),
-                      margin=dict(l=0, r=0, t=0, b=0))
-    fig.update_traces(hoverinfo="x+y")
-    fig.show()
+    plt.plot(x, picture_alpha, color='blue')  # Начальные значения яркости пикселей
+    plt.plot(x, modified_picture_alpha, color='red')  # Измененные значения яркости пикселей
+    plt.xlabel('n-ный пиксель')
+    plt.ylabel('Яркость пикселя')
+    plt.show()
 
 
 def embed_message_distort_container_and_recover_message(empty_image_path: str, filled_image_path: str, key: int, message: str) -> str:
@@ -300,22 +305,22 @@ def embed_message_distort_container_and_recover_message(empty_image_path: str, f
     picture = np.asarray(img, dtype=np.uint8)
     img.close()
 
-    modified_picture = picture.copy()
-    height, width = modified_picture.shape[0], modified_picture.shape[1]
+    height, width = picture.shape[0], picture.shape[1]
+
     # усреднение по соседним пикселям в блоке
-    window_size = 4
+    window_size = 8
     assert window_size > 0
-
     your_choice = abs(window_size // 2)
-    assert 0 < your_choice < window_size
+    assert 0 <= your_choice <= window_size
     shift_l = your_choice
-    shift_r = window_size - shift_l
+    shift_r = window_size - shift_l + 1
 
-    for start, end in define_bounds_of_blocks(height, width, bruyndonckx.size_of_block):
-        block = modified_picture[start.i: end.i, start.j: end.j].copy()
+    new_picture = picture.copy()
+    for row in np.arange(height):
+        block = new_picture[row, :].copy()
         old_size = block.shape
         block = block.reshape(-1, 4)
-        assert len(block) == 64
+        assert len(block) == width
 
         new_block = block.copy()
         for k in np.arange(block.shape[0]):
@@ -326,10 +331,10 @@ def embed_message_distort_container_and_recover_message(empty_image_path: str, f
             else:
                 new_block[k, 3] = np.mean(block[k - shift_l: block.shape[0], 3])
         del block
-        modified_picture[start.i: end.i, start.j: end.j] = new_block.reshape(old_size)
+        new_picture[row, :] = new_block.reshape(old_size)
 
-    paint_diagram_alpha(picture, modified_picture)
-    Image.fromarray(modified_picture, 'RGBA').save(filled_image_path, 'PNG')
+    paint_diagram_alpha(picture, new_picture)
+    Image.fromarray(new_picture, 'RGBA').save(filled_image_path, 'PNG')
     wrong_recovered_message = bruyndonckx.recover(filled_image_path, key)
     return wrong_recovered_message
 
