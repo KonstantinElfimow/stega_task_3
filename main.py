@@ -71,14 +71,6 @@ class Point:
         return hash((self.__class__, self.i, self.j))
 
 
-def define_bounds_of_blocks(height: int, width: int, n: int) -> tuple[tuple[Point, ...]]:
-    nested_list = [[tuple([i, j]) for j in range(n, width, n)] for i in range(n, height, n)]
-    start_and_end_points_of_blocks = tuple([
-        tuple([Point(i=elements[0] - n, j=elements[1] - n), Point(i=elements[0], j=elements[1])])
-        for sub_list in nested_list for elements in sub_list])
-    return start_and_end_points_of_blocks
-
-
 class Pixel:
     pointer: int = 0
 
@@ -122,6 +114,14 @@ class BruyndonckxMethod:
     @property
     def delta_l(self) -> int:
         return self.__delta_l
+
+    def __define_bounds_of_blocks(self, height: int, width: int) -> tuple[tuple[Point, ...]]:
+        n = self.size_of_block
+        nested_list = [[tuple([i, j]) for j in range(n, width, n)] for i in range(n, height, n)]
+        start_and_end_points_of_blocks = tuple([
+            tuple([Point(i=elements[0] - n, j=elements[1] - n), Point(i=elements[0], j=elements[1])])
+            for sub_list in nested_list for elements in sub_list])
+        return start_and_end_points_of_blocks
 
     def __find_div_index(self, sorted_pixels: tuple[Pixel]) -> int:
         pixels_arr = np.asarray([pixel.rgba for pixel in sorted_pixels], dtype=np.uint8)
@@ -201,7 +201,7 @@ class BruyndonckxMethod:
             raise ValueError('Размер сообщения превышает размер контейнера!')
         message_bits = deque(message_bits)
 
-        for start, end in define_bounds_of_blocks(height, width, self.size_of_block)[:message_bits_length]:
+        for start, end in self.__define_bounds_of_blocks(height, width, self.size_of_block)[:message_bits_length]:
             old_block = picture[start.i: end.i, start.j: end.j].copy()
             old_size = old_block.shape
             old_block = old_block.reshape(-1, 4)
@@ -229,7 +229,7 @@ class BruyndonckxMethod:
         height, width = picture.shape[0], picture.shape[1]
 
         message_bits = []
-        for start, end in define_bounds_of_blocks(height, width, self.size_of_block):
+        for start, end in self.__define_bounds_of_blocks(height, width, self.size_of_block):
             modified_block = picture[start.i: end.i, start.j: end.j].copy()
             modified_block = modified_block.reshape(-1, 4)
             assert len(modified_block) == 64
