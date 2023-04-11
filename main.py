@@ -101,7 +101,7 @@ class BruyndonckxMethod:
     def __init__(self):
         self.__size_of_block: int = 8
         self.__diff_limit: int = 3
-        self.__delta_l = 5
+        self.__delta_l = 16
 
     @property
     def size_of_block(self) -> int:
@@ -201,7 +201,7 @@ class BruyndonckxMethod:
             raise ValueError('Размер сообщения превышает размер контейнера!')
         message_bits = deque(message_bits)
 
-        for start, end in self.__define_bounds_of_blocks(height, width, self.size_of_block)[:message_bits_length]:
+        for start, end in self.__define_bounds_of_blocks(height, width)[:message_bits_length]:
             old_block = picture[start.i: end.i, start.j: end.j].copy()
             old_size = old_block.shape
             old_block = old_block.reshape(-1, 4)
@@ -229,7 +229,7 @@ class BruyndonckxMethod:
         height, width = picture.shape[0], picture.shape[1]
 
         message_bits = []
-        for start, end in self.__define_bounds_of_blocks(height, width, self.size_of_block):
+        for start, end in self.__define_bounds_of_blocks(height, width):
             modified_block = picture[start.i: end.i, start.j: end.j].copy()
             modified_block = modified_block.reshape(-1, 4)
             assert len(modified_block) == 64
@@ -286,8 +286,8 @@ def accuracy(message: str, recovered_message: str) -> float:
 
 
 def paint_diagram_alpha(picture: np.array, modified_picture: np.array) -> None:
-    picture_alpha = (picture[:64, :64].copy().reshape(-1, 4))[:, 3]
-    modified_picture_alpha = (modified_picture[:64, :64].copy().reshape(-1, 4))[:, 3]
+    picture_alpha = (picture[0, :picture.shape[1]].copy().reshape(-1, 4))[:, 3]
+    modified_picture_alpha = (modified_picture[0, :modified_picture.shape[1]].copy().reshape(-1, 4))[:, 3]
     x = np.arange(len(picture_alpha))
 
     plt.plot(x, picture_alpha, color='blue')  # Начальные значения яркости пикселей
@@ -303,6 +303,7 @@ def embed_message_distort_container_and_recover_message(empty_image_path: str, f
 
     img = Image.open(filled_image_path).convert('RGBA')
     picture = np.asarray(img, dtype=np.uint8)
+    img.show()
     img.close()
 
     height, width = picture.shape[0], picture.shape[1]
@@ -334,7 +335,13 @@ def embed_message_distort_container_and_recover_message(empty_image_path: str, f
         new_picture[row, :] = new_block.reshape(old_size)
 
     paint_diagram_alpha(picture, new_picture)
+
     Image.fromarray(new_picture, 'RGBA').save(filled_image_path, 'PNG')
+
+    img = Image.open(filled_image_path).convert('RGBA')
+    img.show()
+    img.close()
+
     wrong_recovered_message = bruyndonckx.recover(filled_image_path, key)
     return wrong_recovered_message
 
